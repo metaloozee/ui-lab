@@ -29,3 +29,31 @@ release. Add a tool name to select part of the graph. For example, run
 - [ ] If setup, runtime, or package-manager behavior looks wrong, run `vp env doctor` and include its output when asking for help.
 
 <!--VITE PLUS END-->
+
+# UI Lab Rules
+
+ui-lab is a personal scratchpad for pushing UI and interaction craft as far as it goes. The owner reviews every detail, so feel, optical balance, and motion are the requirement. Read `DESIGN.md` before UI work, and the `fluid-functionalism` skill before writing motion.
+
+## Every element, experiments included
+
+- **Fluid hover:** build every hoverable element on `useFluidHover` and `FluidHoverHighlight`. A lone control uses `useSelfFluidHover`.
+- **Press:** every interactive element animates when pressed, through `Button` or `pressMotion()`.
+- **Meaningful motion:** a state change shows what changed. Selection travels to the new choice, and a popover morphs out of its trigger through `useMorphFromAnchor`. A fade supports motion and is never the whole animation.
+- **Color:** use semantic OKLCH tokens from `src/index.css`. A nested object takes the next shade of its parent's color.
+- **Optical balance:** judge controls as a set. Neighboring icons come from one family and read at one visual size, and neighboring text shares one size.
+- **Icons:** read them by role with `useIcons()`, free variants only, with roles overridden in `src/lib/icons.ts`.
+
+## The canvas
+
+- **Minimal:** the canvas, toolbar, and Inspect hold only what the owner asked for. Propose any new demo, sample, explainer, or control first.
+- **Plain words:** name things by what people recognize, such as "Small moves" rather than `spring.fast`.
+- **Inspect:** settings only, applied live to the real canvas.
+- **Items rest clear:** a carried item may pass over anything and follows the pointer exactly. It always lands clear of its neighbors.
+- **Canvas focus:** the canvas never takes focus. Its shortcuts apply when no control has focus.
+- **`create-canvas`:** where it differs, this file wins. Items snap and never rest overlapping, handles show a grab cursor, and shortcuts don't need the canvas focused.
+
+## Working here
+
+- **Done means seen:** run it, then hover, press, and drag it in both themes, and look at screenshots and frame samples. Tests prove logic only. Report what you could not judge.
+- **Root causes:** when something looks wrong, find why, then check the same class of problem elsewhere.
+- **Registry:** install items without `--overwrite`, because our copies carry edits. Then rename their tokens to the roles in `src/index.css`.
