@@ -37,6 +37,12 @@
       "skillPath": "skills/create-design-md/SKILL.md",
       "computedHash": "5376526e2d60d21ab85fdba2ae15d1ee7be41fa3ee5b76a8717a08327d6459b1"
     },
+    "fluid-functionalism": {
+      "source": "mickadesign/fluid-functionalism",
+      "sourceType": "github",
+      "skillPath": "skills/fluid-functionalism/SKILL.md",
+      "computedHash": "4c7f29a8ee10105b3c8396e3b317bcd59043a6f03ee576cbe5ee6a72ee3fdde3"
+    },
     "teardown": {
       "source": "jakubkrehel/skills",
       "sourceType": "github",

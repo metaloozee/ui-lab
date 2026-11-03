@@ -1,0 +1,9 @@
+{
+  "name": "fluid-functionalism-audit",
+  "private": true,
+  "description": "Measures a running page against Fluid Functionalism's invariants. Point it at a route on your dev server.",
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}
