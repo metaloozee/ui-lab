@@ -32,13 +32,23 @@ release. Add a tool name to select part of the graph. For example, run
 
 # UI Lab Rules
 
-ui-lab is a personal scratchpad for pushing UI and interaction craft as far as it goes. The owner reviews every detail, so feel, optical balance, and motion are the requirement. Read `DESIGN.md` before UI work, and the `fluid-functionalism` skill before writing motion.
+ui-lab is a personal scratchpad for crafting complex interface elements and screens over one design and motion system: meshes, one-time-code inputs, forms, steppers. The owner reviews every detail, so feel, optical balance, and motion are the requirement. Read `DESIGN.md` before UI work, and the `fluid-functionalism` skill before writing motion.
+
+## How a component arrives
+
+Match what the owner sent. Whatever the case, the result is written from scratch against this system.
+
+- **Source code:** rewrite it from scratch. Treat it as a behavior spec, and take nothing but behavior from it.
+- **Snapshots and a description:** reverse engineer it, and list the behaviors you inferred rather than saw, so the owner can correct them.
+- **A drawing or a fuzzy explanation:** read the `grilling` skill and interview relentlessly, before any production code, until every state, transition, and edge case has an answer from the owner.
+
+A new item is a file at `src/canvas/previews/<id>.tsx` and one entry in `src/canvas/registry.tsx`. Its `purpose` opens the prompt another agent receives, so state what the component is for and how it behaves. Generic pieces such as buttons and badges stay in `src/components/ui`, off the canvas.
 
 ## Every element, experiments included
 
 - **Fluid hover:** build every hoverable element on `useFluidHover` and `FluidHoverHighlight`. A lone control uses `useSelfFluidHover`.
 - **Press:** every interactive element animates when pressed, through `Button` or `pressMotion()`.
-- **Meaningful motion:** a state change shows what changed. Selection travels to the new choice, and a popover morphs out of its trigger through `useMorphFromAnchor`. A fade supports motion and is never the whole animation.
+- **Meaningful motion:** a state change shows what changed. Selection travels to the new choice, and a popover morphs out of its trigger through `useMorphFromAnchor`, and the toolbar becomes its panels through `useSurfaceMorph`. A fade supports motion and is never the whole animation.
 - **Color:** use semantic OKLCH tokens from `src/index.css`. A nested object takes the next shade of its parent's color.
 - **Optical balance:** judge controls as a set. Neighboring icons come from one family and read at one visual size, and neighboring text shares one size.
 - **Icons:** read them by role with `useIcons()`, free variants only, with roles overridden in `src/lib/icons.ts`.
