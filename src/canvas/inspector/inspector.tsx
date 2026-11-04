@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotionConfig } from "motion/react";
+import { motion, useReducedMotionConfig } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,8 @@ function TuningRow({
         size="compact"
         label={label}
         showValue={false}
+        // The margin leaves room for a value line this row shows in its own column.
+        className="mb-0"
         min={min}
         max={max}
         step={0.01}
@@ -123,85 +125,89 @@ function FineTune({
 
   const seconds = (value: number) => `${value.toFixed(2)}s`;
   // Height is a layout property, which MotionConfig's reduced motion doesn't cover by itself.
-  const transition = reduceMotion ? { duration: 0 } : spring.moderate;
+  const instant = { duration: 0 };
+  const transition = open ? spring.moderate : spring.moderate.exit;
+
+  // The sliders are slow to mount. On the click, that freeze would spend half the spring unseen, so
+  // they mount ahead of time, once the panel's own morph has finished.
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
+  useEffect(() => {
+    if (mounted) return;
+    const timer = window.setTimeout(() => setMounted(true), spring.slow.duration * 2000);
+    return () => window.clearTimeout(timer);
+  }, [mounted]);
 
   return (
-    <AnimatePresence initial={false}>
-      {open && (
-        <motion.div
-          id={FINE_TUNE_ID}
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          exit={{
-            height: 0,
-            opacity: 0,
-            transition: reduceMotion ? { duration: 0 } : spring.moderate.exit,
-          }}
-          transition={transition}
-          className="overflow-hidden"
-        >
-          <div className="flex flex-col gap-3 pt-2">
-            {SPRING_TIERS.map((tier) => {
-              const values = tuning[tier];
-              return (
-                <section key={tier} className="flex flex-col gap-1">
-                  <h3 className="text-caption font-medium text-text-primary">
-                    {TIER_LABELS[tier]}
-                  </h3>
-                  <TuningRow
-                    label="Time"
-                    value={values.duration}
-                    min={0.02}
-                    max={1.2}
-                    format={seconds}
-                    onChange={(duration) => setTier(tier, { duration })}
-                  />
-                  <TuningRow
-                    label="Bounce"
-                    value={values.bounce}
-                    min={0}
-                    max={0.6}
-                    format={(value) => value.toFixed(2)}
-                    onChange={(bounce) => setTier(tier, { bounce })}
-                  />
-                  <TuningRow
-                    label="Exit"
-                    value={values.exit}
-                    min={0.02}
-                    max={0.8}
-                    format={seconds}
-                    onChange={(exit) => setTier(tier, { exit })}
-                  />
-                </section>
-              );
-            })}
-            <Choice
-              label="Reduced motion"
-              value={tuning.reducedMotion}
-              options={REDUCED}
-              onChange={(reducedMotion) => onChange({ ...tuning, reducedMotion })}
-            />
-            <div className="flex items-center justify-end gap-2">
-              <span role="status" className="mr-auto text-caption text-text-secondary">
-                {copied === "copied" ? "Copied" : copied === "failed" ? "Couldn't copy" : ""}
-              </span>
-              <Button size="compact" variant="ghost" onClick={() => onChange(DEFAULT_MOTION)}>
-                Reset
-              </Button>
-              <Button
-                size="compact"
-                variant="tertiary"
-                onClick={() => {
-                  void copyMotionTokens(tuning).then(setCopied);
-                }}
-              >
-                Copy values
-              </Button>
-            </div>
+    <motion.div
+      id={FINE_TUNE_ID}
+      inert={!open}
+      initial={false}
+      animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
+      transition={reduceMotion ? instant : transition}
+      // Cancels the parent's gap while closed, so a collapsed panel keeps its height.
+      className="-mt-2 overflow-hidden"
+    >
+      {mounted && (
+        <div className="flex flex-col gap-3 pt-4">
+          {SPRING_TIERS.map((tier) => {
+            const values = tuning[tier];
+            return (
+              <section key={tier} className="flex flex-col gap-1">
+                <h3 className="text-caption font-medium text-text-primary">{TIER_LABELS[tier]}</h3>
+                <TuningRow
+                  label="Time"
+                  value={values.duration}
+                  min={0.02}
+                  max={1.2}
+                  format={seconds}
+                  onChange={(duration) => setTier(tier, { duration })}
+                />
+                <TuningRow
+                  label="Bounce"
+                  value={values.bounce}
+                  min={0}
+                  max={0.6}
+                  format={(value) => value.toFixed(2)}
+                  onChange={(bounce) => setTier(tier, { bounce })}
+                />
+                <TuningRow
+                  label="Exit"
+                  value={values.exit}
+                  min={0.02}
+                  max={0.8}
+                  format={seconds}
+                  onChange={(exit) => setTier(tier, { exit })}
+                />
+              </section>
+            );
+          })}
+          <Choice
+            label="Reduced motion"
+            value={tuning.reducedMotion}
+            options={REDUCED}
+            onChange={(reducedMotion) => onChange({ ...tuning, reducedMotion })}
+          />
+          <div className="flex items-center justify-end gap-2">
+            <span role="status" className="mr-auto text-caption text-text-secondary">
+              {copied === "copied" ? "Copied" : copied === "failed" ? "Couldn't copy" : ""}
+            </span>
+            <Button size="compact" variant="ghost" onClick={() => onChange(DEFAULT_MOTION)}>
+              Reset
+            </Button>
+            <Button
+              size="compact"
+              variant="tertiary"
+              onClick={() => {
+                void copyMotionTokens(tuning).then(setCopied);
+              }}
+            >
+              Copy values
+            </Button>
           </div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -240,7 +246,7 @@ export function Inspector({
     >
       <ScrollArea
         className="min-h-0 flex-1"
-        viewportClassName="max-h-[calc(100dvh-7rem)] [&>*]:!min-w-0"
+        viewportClassName="scroll-fade max-h-[calc(100dvh-7rem)] [&>*]:!min-w-0"
       >
         <div className="flex flex-col gap-2 px-3 pt-3 pb-1">
           <Choice<Feel>

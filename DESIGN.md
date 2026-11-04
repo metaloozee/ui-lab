@@ -203,6 +203,7 @@ A surface never appears from nothing, and a fade supports motion rather than bei
 - **A toolbar that becomes a larger surface** resizes that one surface through `useSurfaceMorph`, so its shadow and corners stay real. Each morph starts from where the surface is right now, so an interrupted one turns around without a jump. Leaving content fades out in the first 35% of the morph. Arriving content waits until 35% and finishes by 80%. Whatever shows on both sides of a morph never dips.
 - **Controls that slide under a resting cursor** ignore the pointer until it moves, so nothing lights up or takes a click it wasn't aimed at.
 - **A height that follows content** springs on `spring.moderate`, and only when that element itself changed. Stacked measured-height animations chase each other and land late.
+- **Slow content mounts ahead of time,** hidden, rather than on the click that reveals it. A spring's clock runs through any freeze, so the move would otherwise happen unseen.
 
 ## Interaction
 
