@@ -62,6 +62,39 @@ spacing:
 
 ui-lab is a personal scratchpad for crafting complex interface elements and screens, such as meshes, one-time-code inputs, forms, and steppers. A blank infinite canvas, in the spirit of Excalidraw and tldraw, makes them live. Each one is built from scratch over the system described here, then handed to other workspaces as a prompt. The direction is minimal: neutral greys carry the interface, and one accent, chosen from the toolbar, carries emphasis. Components and motion build on the Fluid Functionalism registry, whose copies here are owned and edited locally.
 
+## Source files
+
+Code named in this file lives in the ui-lab repo. Every `src/` and `lint/` path here is relative to `https://raw.githubusercontent.com/metaloozee/ui-lab/main/`, so `src/lib/springs.ts` is at `https://raw.githubusercontent.com/metaloozee/ui-lab/main/src/lib/springs.ts`.
+
+When you work in another workspace, resolve each name in this order:
+
+1. If the workspace already has it, use that.
+2. If it doesn't, read the file below and rebuild it for that workspace, keeping its behavior and values exact.
+3. If the file can't be reached, rebuild it yourself from what this document says about it.
+
+| Name                                               | File                                                                          |
+| -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Color tokens, `--spring-fast`, `--spring-moderate` | `src/index.css`                                                               |
+| `spring`, `DEFAULT_MOTION`                         | `src/lib/springs.ts`                                                          |
+| `pressMotion()`                                    | `src/lib/press.ts`                                                            |
+| Text weights                                       | `src/lib/font-weight.ts`                                                      |
+| `typeClass()`                                      | `src/lib/type-scale.ts`                                                       |
+| `useSize()`                                        | `src/lib/size-context.tsx`                                                    |
+| `useShape()`, `nestedRadius()`                     | `src/lib/shape-context.tsx`                                                   |
+| `useIcons()`                                       | `src/lib/icon-context.tsx`                                                    |
+| Icon roles                                         | `src/lib/icons.ts`                                                            |
+| `MotionConfig` and the providers around every view | `src/lib/fluid-provider.tsx`                                                  |
+| `useFluidHover`                                    | `src/hooks/use-fluid-hover.ts`                                                |
+| `FluidHoverHighlight`                              | `src/components/fluid-hover-highlight.tsx`                                    |
+| `useSelfFluidHover`                                | `src/components/self-fluid-hover.tsx`                                         |
+| `useMorphFromAnchor`                               | `src/hooks/use-morph-from-anchor.ts`                                          |
+| `useSurfaceMorph`                                  | `src/hooks/use-surface-morph.ts`                                              |
+| `Button`                                           | `src/components/ui/button.tsx`                                                |
+| Other controls                                     | `src/components/ui/{badge,banner,scroll-area,slider,switch,tabs,tooltip}.tsx` |
+| The rules `vp check` enforces                      | `lint/design-tokens.js`                                                       |
+
+`MotionConfig` and `useReducedMotionConfig()` come from `motion/react`. Package versions are in `package.json` at the same address. The `@fluid` registry is `https://www.fluidfunctionalism.com/r/{name}.json`.
+
 ## Colors
 
 Every color is an OKLCH token in `src/index.css`. Components use semantic tokens only, named by role, such as `bg-bg-surface` and `text-text-secondary`. Primitives such as `--neutral-900` and `--blue-600` stay inside the token file.
