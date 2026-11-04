@@ -59,10 +59,10 @@ export function Canvas({ entries }: { entries: readonly CanvasEntry[] }) {
           ))}
         </div>
       </div>
-      <CanvasControls controller={controller} />
+      <CanvasControls controller={controller} entries={entries} />
       <p id="canvas-instructions" className="sr-only">
         Arrow keys pan. Plus and minus zoom. 1 fits everything. 0 resets the camera. Hold Space and
-        drag to pan from anywhere.
+        drag to pan from anywhere. Control or Command K searches the canvas.
       </p>
       <p id="canvas-move-instructions" className="sr-only">
         Arrow keys move this item. Hold Shift for larger steps.

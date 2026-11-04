@@ -52,6 +52,8 @@ const WHEEL_LATCH_MS = 140;
 const SAVE_DELAY_MS = 300;
 const BUTTON_ZOOM_FACTOR = 1.25;
 const OVERLAY_SELECTOR = "[data-canvas-overlay]";
+/** Holds focus for a panel without being a control, so canvas shortcuts still apply. */
+const FOCUS_LANDING_ATTRIBUTE = "data-focus-landing";
 const SURFACE_ATTRIBUTE = "data-canvas-surface";
 const HANDLE_ATTRIBUTE = "data-canvas-handle";
 
@@ -321,6 +323,12 @@ export class CanvasController {
   };
 
   resetView = (): void => this.flyTo(resetCamera(this.viewportSize));
+
+  /** Brings one item to the middle, at full size if it fits. */
+  focusItem(id: string): void {
+    const rect = this.itemBounds().get(id);
+    if (rect) this.flyTo(fitCamera(rect, this.viewportSize, FIT_PADDING));
+  }
 
   /** The move handle's keyboard path. Steps are canvas units, so they don't change with zoom. */
   nudgeItem(id: string, dx: number, dy: number): void {
@@ -1111,7 +1119,9 @@ export class CanvasController {
 
   private canArmSpace(): boolean {
     const active = document.activeElement;
-    if (!active || active === document.body) return true;
+    if (!active || active === document.body || active.hasAttribute(FOCUS_LANDING_ATTRIBUTE)) {
+      return true;
+    }
     if (!this.viewport?.contains(active)) return false;
     return !active.closest(INTERACTIVE_SELECTOR);
   }
@@ -1145,7 +1155,7 @@ export class CanvasController {
   private onShortcutKeyDown = (event: KeyboardEvent): void => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const active = document.activeElement;
-    if (active && active !== document.body) return;
+    if (active && active !== document.body && !active.hasAttribute(FOCUS_LANDING_ATTRIBUTE)) return;
     const step = event.shiftKey ? 240 : 48;
     const actions: Record<string, () => void> = {
       ArrowLeft: () => this.panBy(step, 0),
