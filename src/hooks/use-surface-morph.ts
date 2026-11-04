@@ -1,5 +1,6 @@
 import { animate, useReducedMotionConfig } from "motion/react";
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { spring } from "@/lib/springs";
 
@@ -105,8 +106,9 @@ export function useSurfaceMorph<View extends string>({
         atRest.current = true;
         if (view) {
           surface.style.width = widths[view];
+          // The old view has to be gone first, or it stretches the released region for a frame.
+          flushSync(() => setRendered([view]));
           region.style.height = "";
-          setRendered([view]);
           // Whatever slid under a resting cursor hasn't been pointed at yet, so it waits for a move.
           // Touch has no cursor, and its next tap would be lost.
           if (window.matchMedia("(hover: hover)").matches) {
