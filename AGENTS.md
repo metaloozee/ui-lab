@@ -32,17 +32,13 @@ release. Add a tool name to select part of the graph. For example, run
 
 # UI Lab Rules
 
-ui-lab is a personal scratchpad for crafting complex interface elements and screens over one design and motion system: meshes, one-time-code inputs, forms, steppers. The owner reviews every detail, so feel, optical balance, and motion are the requirement. Read `DESIGN.md` before UI work, and the `fluid-functionalism` skill before writing motion.
+ui-lab is a personal scratchpad for crafting complex interface elements and screens over one design and motion system: meshes, one-time-code inputs, forms, steppers. The owner reviews every detail, so feel, optical balance, and motion are the requirement. Read `DESIGN.md` before UI work.
 
-## How a component arrives
+## Skills
 
-Match what the owner sent. Whatever the case, the result is written from scratch against this system.
-
-- **Source code:** rewrite it from scratch. Treat it as a behavior spec, and take nothing but behavior from it.
-- **Snapshots and a description:** reverse engineer it, and list the behaviors you inferred rather than saw, so the owner can correct them.
-- **A drawing or a fuzzy explanation:** read the `grilling` skill and interview relentlessly, before any production code, until every state, transition, and edge case has an answer from the owner.
-
-A new item is a file at `src/canvas/previews/<id>.tsx` and one entry in `src/canvas/registry.tsx`. Its `purpose` opens the prompt another agent receives, so state what the component is for and how it behaves. Generic pieces such as buttons and badges stay in `src/components/ui`, off the canvas.
+- **`craft-element`:** read it whenever a component arrives, whether as source code, snapshots, or a drawing. It routes each case and builds the canvas item.
+- **`craft-motion`, `craft-color`, `craft-details`:** read the matching one before writing that part of any interface.
+- **`/explore-variants`, `/break-element`, `/polish-element`:** the owner starts these. Suggest one when it would help.
 
 ## Every element, experiments included
 
@@ -60,7 +56,6 @@ A new item is a file at `src/canvas/previews/<id>.tsx` and one entry in `src/can
 - **Inspect:** settings only, applied live to the real canvas.
 - **Items rest clear:** a carried item may pass over anything and follows the pointer exactly. It always lands clear of its neighbors.
 - **Canvas focus:** the canvas never takes focus. Its shortcuts apply when no control has focus.
-- **`create-canvas`:** where it differs, this file wins. Items snap and never rest overlapping, handles show a grab cursor, and shortcuts don't need the canvas focused.
 
 ## Working here
 
