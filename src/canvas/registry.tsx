@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 
 import { GitHubContributions } from "./previews/github-contributions";
+import { Wallet } from "./previews/wallet";
 
 export type CanvasEntry = {
   /** Stable key for saved positions. Keep it when renaming. */
@@ -47,5 +48,53 @@ export const canvasEntries: readonly CanvasEntry[] = [
     component: GitHubContributions,
     // The owner's real public account, on request, so this preview fetches live data.
     props: { username: "metaloozee" },
+  }),
+  preview({
+    id: "wallet",
+    name: "Wallet",
+    purpose:
+      "A wallet that rests as a slim stitched leather card holder with its cards stacked inside. Hovering or focusing it raises the cards so each can be told apart, and choosing one lifts that card out at full size while the rest tuck away and the holder recedes, until Escape, a click outside, or another click on the card returns it.",
+    source: "/src/canvas/previews/wallet.tsx",
+    width: 320,
+    height: 380,
+    x: -160,
+    y: 170,
+    component: Wallet,
+    props: {
+      cards: [
+        {
+          id: "graphite",
+          issuer: "Graphite",
+          tone: "graphite",
+          lastFour: "7305",
+          cardholder: "ayn.wtf",
+          expiry: "03/30",
+        },
+        {
+          id: "ultramarine",
+          issuer: "Ultramarine",
+          tone: "ultramarine",
+          lastFour: "4821",
+          cardholder: "ayn.wtf",
+          expiry: "09/29",
+        },
+        {
+          id: "forest",
+          issuer: "Forest",
+          tone: "forest",
+          lastFour: "1964",
+          cardholder: "ayn.wtf",
+          expiry: "12/28",
+        },
+        {
+          id: "terracotta",
+          issuer: "Terracotta",
+          tone: "terracotta",
+          lastFour: "0572",
+          cardholder: "ayn.wtf",
+          expiry: "06/31",
+        },
+      ],
+    },
   }),
 ];
