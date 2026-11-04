@@ -1,14 +1,16 @@
 import type { ComponentType, ReactNode } from "react";
 
-import { BadgeColors } from "./previews/badge-colors";
-import { PrimaryButton } from "./previews/primary-button";
-import { StatusBanners } from "./previews/status-banners";
-
 export type CanvasEntry = {
   /** Stable key for saved positions. Keep it when renaming. */
   id: string;
-  /** Unique, readable, and copied when the label is clicked. */
+  /** Unique and readable. Search finds items by it. */
   name: string;
+  /** What it's for and how it behaves. Search reads it, and the copied prompt opens with it. */
+  purpose: string;
+  /** Root-relative path of its component file. The copied prompt follows imports from here. */
+  source: string;
+  /** What the preview was given, so the copied prompt can show it. */
+  previewProps?: unknown;
   width: number;
   height: number;
   /** Where the preview starts, in canvas coordinates. (0, 0) is the middle of a reset camera. */
@@ -17,47 +19,16 @@ export type CanvasEntry = {
   render: () => ReactNode;
 };
 
-function preview<P extends object>(
-  entry: Omit<CanvasEntry, "render"> & {
+export function preview<P extends object>(
+  entry: Omit<CanvasEntry, "render" | "previewProps"> & {
     component: ComponentType<P>;
     /** Synthetic data only. Previews must not reach real services. */
     props: P;
   },
 ): CanvasEntry {
   const { component: Component, props, ...rest } = entry;
-  return { ...rest, render: () => <Component {...props} /> };
+  return { ...rest, previewProps: props, render: () => <Component {...props} /> };
 }
 
 /** Add, rename, or remove canvas items here. Nothing else needs to change. */
-export const canvasEntries: readonly CanvasEntry[] = [
-  preview({
-    id: "spring-button",
-    name: "Button · primary and secondary",
-    component: PrimaryButton,
-    props: { primary: "Save changes", secondary: "Cancel" },
-    x: -140,
-    y: -80,
-    width: 280,
-    height: 160,
-  }),
-  preview({
-    id: "status-banners",
-    name: "Banner · statuses",
-    component: StatusBanners,
-    props: {},
-    x: 180,
-    y: -80,
-    width: 440,
-    height: 428,
-  }),
-  preview({
-    id: "badge-colors",
-    name: "Badge · colors",
-    component: BadgeColors,
-    props: {},
-    x: -560,
-    y: -80,
-    width: 380,
-    height: 216,
-  }),
-];
+export const canvasEntries: readonly CanvasEntry[] = [];

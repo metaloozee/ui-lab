@@ -12,18 +12,20 @@ import { cn } from "@/lib/utils";
 
 import type { CanvasController } from "./controller";
 import { ErrorBoundary } from "./error-boundary";
+import { copyItemPrompt } from "./prompt";
 import type { CanvasEntry } from "./registry";
 
 const NUDGE_STEP = 8;
 const NUDGE_STEP_LARGE = 64;
 const COPIED_MS = 1400;
+const HINTS = { idle: "Copy prompt", copied: "Prompt copied", failed: "Couldn't copy" };
 
 function CopyableName({
-  name,
+  entry,
   index,
   registerItem,
 }: {
-  name: string;
+  entry: CanvasEntry;
   index: number;
   registerItem: (index: number, element: HTMLElement | null) => void;
 }) {
@@ -35,36 +37,16 @@ function CopyableName({
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const copy = async () => {
+    let result: "copied" | "failed" = "copied";
     try {
-      await navigator.clipboard.writeText(name);
+      await copyItemPrompt(entry);
     } catch {
-      setStatus("failed");
-      return;
+      result = "failed";
     }
-    setStatus("copied");
+    setStatus(result);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setStatus("idle"), COPIED_MS);
   };
-
-  if (status === "failed") {
-    return (
-      <>
-        <input
-          readOnly
-          autoFocus
-          value={name}
-          aria-label={`Copy failed. Select the name ${name} manually.`}
-          size={name.length}
-          onFocus={(event) => event.currentTarget.select()}
-          onBlur={() => setStatus("idle")}
-          className="rounded-sm bg-transparent px-1 text-xs font-medium text-text-primary outline-none ring-2 ring-border-focus"
-        />
-        <span className="absolute top-1/2 left-full ml-2 -translate-y-1/2 text-xs whitespace-nowrap text-text-secondary">
-          Couldn't copy. Select it instead.
-        </span>
-      </>
-    );
-  }
 
   return (
     <span className="group/name relative flex items-center">
@@ -75,11 +57,11 @@ function CopyableName({
         onClick={() => void copy()}
         className="relative cursor-default rounded-sm px-1 text-xs font-medium whitespace-nowrap text-text-secondary outline-none data-fluid-hover-active:text-text-primary focus-visible:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus"
       >
-        {name}
+        {entry.name}
       </motion.button>
       <span
         aria-hidden
-        data-visible={status === "copied" || undefined}
+        data-visible={status !== "idle" || undefined}
         className="pointer-events-none absolute top-1/2 left-full ml-1 -translate-y-1/2 text-xs whitespace-nowrap text-text-secondary opacity-0 transition-opacity duration-[var(--spring-fast,80ms)] group-hover/name:opacity-100 group-focus-within/name:opacity-100 data-visible:opacity-100"
       >
         <AnimatePresence mode="popLayout" initial={false}>
@@ -91,12 +73,12 @@ function CopyableName({
             exit={{ opacity: 0, y: -4, transition: spring.fast.exit }}
             transition={spring.moderate}
           >
-            {status === "copied" ? "Copied" : "Click to copy"}
+            {HINTS[status]}
           </motion.span>
         </AnimatePresence>
       </span>
       <span role="status" className="sr-only">
-        {status === "copied" ? `Copied ${name}` : ""}
+        {status === "idle" ? "" : `${HINTS[status]}: ${entry.name}`}
       </span>
     </span>
   );
@@ -147,7 +129,7 @@ function ItemChrome({ entry, controller }: { entry: CanvasEntry; controller: Can
       >
         <Grip size={14} />
       </motion.button>
-      <CopyableName name={entry.name} index={1} registerItem={hover.registerItem} />
+      <CopyableName entry={entry} index={1} registerItem={hover.registerItem} />
     </div>
   );
 }
