@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 
 import { GitHubContributions } from "./previews/github-contributions";
+import { OnboardingStepper } from "./previews/onboarding-stepper";
 import { Wallet } from "./previews/wallet";
 
 export type CanvasEntry = {
@@ -94,6 +95,31 @@ export const canvasEntries: readonly CanvasEntry[] = [
           cardholder: "ayn.wtf",
           expiry: "06/31",
         },
+      ],
+    },
+  }),
+  preview({
+    id: "onboarding-stepper",
+    name: "Onboarding stepper",
+    purpose:
+      "An onboarding flow that asks for a website, then competitors from a fixed list, then prompts to track, with simulated loading stages between screens and a success summary at the end. The site's favicon arrives as you type, becomes the loader, docks in the header, and returns for the payoff, while every keystroke and press gets its own small physical response; the domain fail.test makes each loader fail once so its recovery can be seen.",
+    source: "/src/canvas/previews/onboarding-stepper.tsx",
+    width: 480,
+    height: 520,
+    x: 220,
+    y: 170,
+    component: OnboardingStepper,
+    // Real brands on request, so their favicons, and the one typed, come from Google's favicon service.
+    props: {
+      competitors: [
+        { name: "Linear", domain: "linear.app" },
+        { name: "Notion", domain: "notion.so" },
+        { name: "Asana", domain: "asana.com" },
+        { name: "Jira", domain: "atlassian.com" },
+        { name: "Monday", domain: "monday.com" },
+        { name: "ClickUp", domain: "clickup.com" },
+        { name: "Trello", domain: "trello.com" },
+        { name: "Basecamp", domain: "basecamp.com" },
       ],
     },
   }),
