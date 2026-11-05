@@ -14,7 +14,9 @@ export default defineConfig({
     {
       name: "design-doc",
       configureServer(server) {
-        server.middlewares.use("/design.md", (_req, res) => {
+        // Compared by hand: a mount path ignores case and lowercases what it passes on, which breaks the copied prompt's import of /DESIGN.md.
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.split("?")[0] !== "/design.md") return next();
           res.setHeader("Content-Type", "text/markdown; charset=utf-8");
           res.end(readDesignDoc());
         });
