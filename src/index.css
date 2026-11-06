@@ -276,20 +276,22 @@
   --color-category-fuchsia: oklch(0.667 0.259 322.1);
   --color-category-pink: oklch(0.656 0.212 354.3);
   --color-category-rose: oklch(0.645 0.215 16.4);
+}
 
-  @keyframes spinner-move {
-    to {
-      stroke-dashoffset: -100;
-    }
+/* The loader's keyframes, used inline by the spinners. Inside @theme, Tailwind only emits keyframes
+   an --animate-* token references, so these live at the top level. */
+@keyframes spinner-move {
+  to {
+    stroke-dashoffset: -100;
   }
-  @keyframes spinner-dash {
-    0%,
-    100% {
-      stroke-dasharray: 15 85;
-    }
-    50% {
-      stroke-dasharray: 40 60;
-    }
+}
+@keyframes spinner-dash {
+  0%,
+  100% {
+    stroke-dasharray: 15 85;
+  }
+  50% {
+    stroke-dasharray: 40 60;
   }
 }
 
