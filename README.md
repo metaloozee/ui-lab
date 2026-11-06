@@ -2,6 +2,8 @@
 
 My scratchpad for building interface elements that are fiddly to get right: one-time-code inputs, steppers, forms, meshes. Each one lives on an infinite canvas where I can drag it around, poke at it, and tune it until the motion feels right.
 
+![The ui-lab canvas in dark mode, with a GitHub contributions graph, ASCII bento, wallet, onboarding stepper, and photo delete](docs/canvas.png)
+
 Everything shares one design and motion system. Same tokens, same springs, same hover and press behavior. That consistency is the point. A single good component is easy. A dozen that feel like they belong together takes more work.
 
 ## How it works
