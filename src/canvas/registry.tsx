@@ -3,6 +3,7 @@ import type { ComponentType, ReactNode } from "react";
 import { AsciiBento } from "./previews/ascii-bento";
 import { GitHubContributions } from "./previews/github-contributions";
 import { OnboardingStepper } from "./previews/onboarding-stepper";
+import { PhotoDelete } from "./previews/photo-delete";
 import { Wallet } from "./previews/wallet";
 
 export type CanvasEntry = {
@@ -157,6 +158,65 @@ export const canvasEntries: readonly CanvasEntry[] = [
           title: "Click for a ripple.",
           description: "It rings out from the press.",
           mesh: "beside",
+        },
+      ],
+    },
+  }),
+  preview({
+    id: "photo-delete",
+    name: "Photo delete",
+    purpose:
+      "A grid of six photos where each one's trash button widens into an inline Delete and Cancel confirmation. Confirming crumples the photo into a paper ball while a simulated request runs, a bin rises in the frame's bottom-right corner, and the ball is thrown along a real physics arc: a successful delete lands in the bin, sometimes off the rim, and the grid closes the gap, while a failed one (offline, timeout, server error, rate limit, or still syncing) misses, rests on the floor, flies back, smooths out, and stays in the grid marked “Not deleted”, ready to try again.",
+    source: "/src/canvas/previews/photo-delete.tsx",
+    width: 512,
+    height: 372,
+    x: 760,
+    y: 170,
+    component: PhotoDelete,
+    props: {
+      photos: [
+        // Landscapes from Unsplash (unsplash.com/license), copied into public/photos.
+        {
+          id: "forest",
+          name: "forest.jpg",
+          size: "2.4 MB",
+          src: "/photos/forest.jpg",
+          alt: "A dirt path through a sunlit pine forest",
+        },
+        {
+          id: "lake",
+          name: "lake.jpg",
+          size: "3.1 MB",
+          src: "/photos/lake.jpg",
+          alt: "A rowing boat on a turquoise lake below rocky peaks",
+        },
+        {
+          id: "summit",
+          name: "summit.jpg",
+          size: "1.8 MB",
+          src: "/photos/summit.jpg",
+          alt: "Snowy peaks above a sea of clouds at sunset",
+        },
+        {
+          id: "beach",
+          name: "beach.jpg",
+          size: "2.9 MB",
+          src: "/photos/beach.jpg",
+          alt: "Gentle waves on a sandy beach at sunrise",
+        },
+        {
+          id: "milky-way",
+          name: "milky-way.jpg",
+          size: "4.2 MB",
+          src: "/photos/milky-way.jpg",
+          alt: "The Milky Way over snow-capped mountains",
+        },
+        {
+          id: "meadow",
+          name: "meadow.jpg",
+          size: "2.2 MB",
+          src: "/photos/meadow.jpg",
+          alt: "A spiral of stones in a green valley at sunset",
         },
       ],
     },
