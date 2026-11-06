@@ -67,6 +67,7 @@ import HiCalendar from "@hugeicons/core-free-icons/Calendar01Icon";
 import HiFolder from "@hugeicons/core-free-icons/Folder01Icon";
 import HiSliders from "@hugeicons/core-free-icons/SlidersHorizontalIcon";
 import HiInfo from "@hugeicons/core-free-icons/InformationCircleIcon";
+import HiTrash from "@hugeicons/core-free-icons/Delete02Icon";
 import HiPlay from "@hugeicons/core-free-icons/PlayIcon";
 import HiPause from "@hugeicons/core-free-icons/PauseIcon";
 import HiMinus from "@hugeicons/core-free-icons/MinusSignIcon";
@@ -152,4 +153,5 @@ export const hugeiconsIcons: Record<IconName, IconComponent> = {
   folder: hugeicons(HiFolder),
   "sliders-horizontal": hugeicons(HiSliders),
   info: hugeicons(HiInfo),
+  trash: hugeicons(HiTrash),
 };

@@ -94,7 +94,8 @@ export type IconName =
   | "calendar"
   | "folder"
   | "sliders-horizontal"
-  | "info";
+  | "info"
+  | "trash";
 
 export const defaultIcons: Record<IconName, IconComponent> = hugeiconsIcons;
 

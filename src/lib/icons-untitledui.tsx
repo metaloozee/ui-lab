@@ -65,6 +65,7 @@ import {
   DotsVertical as UuiDotsVertical,
   Sliders01 as UuiSliders,
   InfoCircle as UuiInfo,
+  Trash01 as UuiTrash,
   Play as UuiPlay,
   Minus as UuiMinus,
   Maximize01 as UuiMaximize,
@@ -158,4 +159,5 @@ export const untitleduiIcons: Record<IconName, IconComponent> = {
   folder: untitledui(UuiFolder),
   "sliders-horizontal": untitledui(UuiSliders),
   info: untitledui(UuiInfo),
+  trash: untitledui(UuiTrash),
 };
