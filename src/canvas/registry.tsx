@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 
 import { AsciiBento } from "./previews/ascii-bento";
 import { GitHubContributions } from "./previews/github-contributions";
+import { GridButtons } from "./previews/grid-button";
 import { OnboardingStepper } from "./previews/onboarding-stepper";
 import { PhotoDelete } from "./previews/photo-delete";
 import { Wallet } from "./previews/wallet";
@@ -218,6 +219,71 @@ export const canvasEntries: readonly CanvasEntry[] = [
           src: "/photos/meadow.jpg",
           alt: "A spiral of stones in a green valley at sunset",
         },
+      ],
+    },
+  }),
+  preview({
+    id: "grid-button",
+    name: "Grid button",
+    purpose:
+      "Buttons made like molded caps in three tones, primary in the accent, secondary in neutral, and destructive in the danger color with a trash icon, plus a square icon button. Each has a darker rim, a body lit from above, a bright inner bevel along its top edge, and a shadow in its own color, with a mosaic of small square tiles inside that lights up around the pointer, wider and brighter the faster it moves, and fades back behind it; a press sinks the cap, dims its bevel, and sends a ring of light outward from where it landed, or from the middle for a key press. The icon button's copy icon morphs into a check when pressed and back after a moment, announcing the change to screen readers. A loading button swaps its label for a spinner while a band of light sweeps the mosaic; a press can run a simulated load and return, or load and then show a check and its result with a ring of light before returning, and a disabled button dims and takes no input.",
+    source: "/src/canvas/previews/grid-button.tsx",
+    width: 360,
+    height: 260,
+    x: 480,
+    y: -230,
+    component: GridButtons,
+    props: {
+      rows: [
+        [
+          {
+            kind: "text",
+            id: "start",
+            tone: "primary",
+            label: "Get started",
+            trailingIcon: "chevron-right",
+          },
+          { kind: "text", id: "docs", tone: "secondary", label: "View docs" },
+        ],
+        [
+          {
+            kind: "text",
+            id: "delete",
+            tone: "destructive",
+            label: "Delete project",
+            leadingIcon: "trash",
+          },
+          {
+            kind: "icon",
+            id: "copy",
+            tone: "primary",
+            icon: "copy",
+            doneIcon: "check",
+            label: "Copy prompt",
+            doneLabel: "Copied",
+          },
+        ],
+        [
+          {
+            kind: "text",
+            id: "publishing",
+            tone: "primary",
+            label: "Publish",
+            status: "loading",
+          },
+          { kind: "text", id: "refresh", tone: "secondary", label: "Refresh", flow: "load" },
+        ],
+        [
+          {
+            kind: "text",
+            id: "save",
+            tone: "primary",
+            label: "Save changes",
+            flow: "load-feedback",
+            doneLabel: "Saved",
+          },
+          { kind: "text", id: "submit", tone: "primary", label: "Submit", disabled: true },
+        ],
       ],
     },
   }),
