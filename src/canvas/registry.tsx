@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 
+import { AsciiBento } from "./previews/ascii-bento";
 import { GitHubContributions } from "./previews/github-contributions";
 import { OnboardingStepper } from "./previews/onboarding-stepper";
 import { Wallet } from "./previews/wallet";
@@ -120,6 +121,43 @@ export const canvasEntries: readonly CanvasEntry[] = [
         { name: "ClickUp", domain: "clickup.com" },
         { name: "Trello", domain: "trello.com" },
         { name: "Basecamp", domain: "basecamp.com" },
+      ],
+    },
+  }),
+  preview({
+    id: "ascii-bento",
+    name: "ASCII bento",
+    purpose:
+      "A bento grid of three texture cards, one tall beside two stacked, each pairing a short caption with a field of ASCII glyphs in the accent color. Over a field the cursor hides and the glyphs thin from dense to sparse around the pointer, wider and deeper the faster it moves, then fill back in behind it; a click sends a ring of thinning outward from where it landed.",
+    source: "/src/canvas/previews/ascii-bento.tsx",
+    width: 640,
+    height: 480,
+    x: -840,
+    y: 170,
+    component: AsciiBento,
+    props: {
+      cards: [
+        {
+          id: "tall",
+          label: "Textures",
+          title: "Tuned to your brand.",
+          description: "Hover-reactive patterns in your colors.",
+          mesh: "below",
+        },
+        {
+          id: "top",
+          label: "Weight",
+          title: "Moves with the hand.",
+          description: "Faster strokes part the field wider.",
+          mesh: "above",
+        },
+        {
+          id: "bottom",
+          label: "Ripple",
+          title: "Click for a ripple.",
+          description: "It rings out from the press.",
+          mesh: "beside",
+        },
       ],
     },
   }),
