@@ -1568,6 +1568,8 @@ export function OnboardingStepper({ competitors }: { competitors: readonly Compe
         <FooterSlot shown={backShown}>
           <motion.div
             whileTap={{ scale: 0.97, transition: spring.fast }}
+            // Motion makes a pressable element focusable. The button inside is the tab stop.
+            tabIndex={-1}
             transition={hapticSpring()}
           >
             <Button variant="ghost" onClick={handleBack}>
@@ -1613,6 +1615,8 @@ export function OnboardingStepper({ competitors }: { competitors: readonly Compe
           <motion.div
             style={actionKick.style}
             whileTap={{ scale: 0.95, transition: spring.fast }}
+            // Motion makes a pressable element focusable. The button inside is the tab stop.
+            tabIndex={-1}
             transition={hapticSpring()}
           >
             <Button data-action={actionShown ? "" : undefined} onClick={handleAction}>
