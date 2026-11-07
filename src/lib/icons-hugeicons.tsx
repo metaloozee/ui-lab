@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import HiChevronRight from "@hugeicons/core-free-icons/ArrowRight01Icon";
+import HiChevronRight from "@hugeicons/core-free-icons/ArrowRight02Icon";
 import HiChevronDown from "@hugeicons/core-free-icons/ArrowDown01Icon";
 import HiDropper from "@hugeicons/core-free-icons/DropperIcon";
 import HiX from "@hugeicons/core-free-icons/Cancel01Icon";
@@ -27,10 +27,10 @@ import HiClock from "@hugeicons/core-free-icons/Clock01Icon";
 import HiStar from "@hugeicons/core-free-icons/StarIcon";
 import HiSettings from "@hugeicons/core-free-icons/Settings01Icon";
 import HiPlus from "@hugeicons/core-free-icons/PlusSignIcon";
-import HiArrowLeft from "@hugeicons/core-free-icons/ArrowLeft01Icon";
-import HiArrowRight from "@hugeicons/core-free-icons/ArrowRight01Icon";
-import HiArrowUp from "@hugeicons/core-free-icons/ArrowUp01Icon";
-import HiArrowDown from "@hugeicons/core-free-icons/ArrowDown01Icon";
+import HiArrowLeft from "@hugeicons/core-free-icons/ArrowLeft02Icon";
+import HiArrowRight from "@hugeicons/core-free-icons/ArrowRight02Icon";
+import HiArrowUp from "@hugeicons/core-free-icons/ArrowUp02Icon";
+import HiArrowDown from "@hugeicons/core-free-icons/ArrowDown02Icon";
 import HiSearch from "@hugeicons/core-free-icons/Search01Icon";
 import HiLoader from "@hugeicons/core-free-icons/Loading01Icon";
 import HiUsers from "@hugeicons/core-free-icons/UserGroupIcon";
