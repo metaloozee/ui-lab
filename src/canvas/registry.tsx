@@ -223,7 +223,7 @@ export const canvasEntries: readonly CanvasEntry[] = [
     id: "grid-button",
     name: "Grid button",
     purpose:
-      "Buttons made like molded caps in three tones, primary in the accent, secondary in neutral, and destructive in the danger color with a trash icon, plus a square icon button. Each has a darker rim, a body lit from above, a bright inner bevel along its top edge, and a shadow in its own color, with a mosaic of small square tiles inside that lights up around the pointer, wider and brighter the faster it moves, and fades back behind it; a press sinks the cap, dims its bevel, and sends a ring of light outward from where it landed, or from the middle for a key press. The icon button's copy icon morphs into a check when pressed and back after a moment, announcing the change to screen readers. A loading button swaps its label for a spinner while a band of light sweeps the mosaic; a press can run a simulated load and return, or load and then show a check and its result with a ring of light before returning, and a disabled button dims and takes no input.",
+      "Buttons made like molded caps in three tones, primary in the accent, secondary in neutral, and destructive in the danger color with a trash icon, plus a square icon button. Each has a darker rim, a body lit from above, a bright inner bevel along its top edge, and a shadow in its own color, with a mosaic of small square tiles inside that lights up around the pointer, wider and brighter the faster it moves, and fades back behind it; a press sinks the cap, dims its bevel, and sends a ring of light outward from where it landed, or from the middle for a key press. The icon button's copy icon morphs into a check when pressed and back after a moment, announcing the change to screen readers. A loading button takes no input and hides its label, announcing its loading label, such as Publishing…, to screen readers, while its columns of tiles light from the bottom up and rise and fall in a wave that travels out from where it was pressed; a press can run a simulated load and return, or load and then show a check and its result with a ring of light before returning, and a disabled button dims and takes no input.",
     source: "/src/canvas/previews/grid-button.tsx",
     width: 360,
     height: 260,
@@ -266,9 +266,17 @@ export const canvasEntries: readonly CanvasEntry[] = [
             id: "publishing",
             tone: "primary",
             label: "Publish",
+            loadingLabel: "Publishing…",
             status: "loading",
           },
-          { kind: "text", id: "refresh", tone: "secondary", label: "Refresh", flow: "load" },
+          {
+            kind: "text",
+            id: "refresh",
+            tone: "secondary",
+            label: "Refresh",
+            loadingLabel: "Refreshing…",
+            flow: "load",
+          },
         ],
         [
           {
@@ -277,6 +285,7 @@ export const canvasEntries: readonly CanvasEntry[] = [
             tone: "primary",
             label: "Save changes",
             flow: "load-feedback",
+            loadingLabel: "Saving…",
             doneLabel: "Saved",
           },
           { kind: "text", id: "submit", tone: "primary", label: "Submit", disabled: true },
