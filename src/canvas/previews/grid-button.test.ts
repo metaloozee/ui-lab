@@ -4,8 +4,9 @@ import {
   labelShade,
   pointerLight,
   rippleLight,
-  sweepCenter,
   tileNoise,
+  waveHeight,
+  waveLight,
   weightFor,
 } from "./grid-button";
 
@@ -70,11 +71,29 @@ describe("tileNoise", () => {
   });
 });
 
-describe("sweepCenter", () => {
-  it("enters past the left edge, crosses, and starts over each period", () => {
-    expect(sweepCenter(0, 200)).toBeLessThan(0);
-    expect(sweepCenter(1299, 200)).toBeGreaterThan(200);
-    expect(sweepCenter(650, 200)).toBeCloseTo(100, 0);
-    expect(sweepCenter(1300 + 650, 200)).toBeCloseTo(sweepCenter(650, 200));
+describe("waveHeight", () => {
+  it("rises from the floor as a load begins, then rides between its low and full height", () => {
+    expect(waveHeight(0, 0, false)).toBe(0);
+    for (let at = 400; at < 3000; at += 37) {
+      const height = waveHeight(3, at, false);
+      expect(height).toBeGreaterThanOrEqual(0.2 - 1e-9);
+      expect(height).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("travels outward: a farther column reaches the same height later", () => {
+    expect(waveHeight(4.5, 1000 + 550, false)).toBeCloseTo(waveHeight(0, 1000, false));
+  });
+
+  it("holds still under reduced motion", () => {
+    expect(waveHeight(2, 0, true)).toBe(waveHeight(2, 5000, true));
+  });
+});
+
+describe("waveLight", () => {
+  it("lights whole tiles below the height and the top tile in part", () => {
+    expect(waveLight(0, 2.4)).toBe(1);
+    expect(waveLight(2, 2.4)).toBeCloseTo(0.4);
+    expect(waveLight(3, 2.4)).toBe(0);
   });
 });

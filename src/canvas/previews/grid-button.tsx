@@ -51,12 +51,25 @@ const RIPPLE_LIFE_MS = 800;
 const PULSE_RADIUS = 40;
 const PULSE_LIFE_MS = 360;
 const SETTLED = 0.002;
-/** While loading, a band of light this wide crosses the mosaic once per period. */
-const SWEEP_MS = 1300;
-const SWEEP_BAND = 34;
-const SWEEP_STRENGTH = 0.75;
-/** Under reduced motion the sweep holds still as an even glow across the mosaic. */
-const BUSY_GLOW = 0.3;
+/**
+ * While loading, each column of tiles lights from the bottom up to a height that rides a wave. The
+ * crests travel outward from where the press landed, one per period, this many tiles apart, and the
+ * columns rise from the floor as the load begins.
+ */
+const WAVE_PERIOD_MS = 1100;
+const WAVE_LENGTH = 9;
+/** The lowest a column falls, as a share of the rows, so every column always shows some light. */
+const WAVE_MIN = 0.2;
+const WAVE_GROW_MS = 360;
+/** The wave lets go of a tile faster than the mosaic does, so its crests stay crisp. */
+const WAVE_RELEASE_MS = 110;
+/** The wave lights its tiles in its own ink, a step past the mosaic's, at least this share of full. */
+const WAVE_FLOOR = 0.75;
+/** While loading, the mosaic's resting light falls to this share, so the wave is the bright thing. */
+const BUSY_REST = 0.25;
+const BUSY_REST_MS = 200;
+/** Under reduced motion the wave holds still at this moment of its period. */
+const STILL_MS = WAVE_PERIOD_MS * 0.25;
 
 /** Tile opacity at rest ranges up to this, and lit tiles reach the max. */
 const REST_ALPHA = 0.4;
@@ -72,10 +85,21 @@ const LABEL_DIM = 0.12;
 const LABEL_FEATHER_X = 30;
 const LABEL_FEATHER_Y = 8;
 
-/** Where the loading band's center sits at `now`, entering past the left edge and leaving past the right. */
-export function sweepCenter(now: number, width: number): number {
-  const progress = (((now % SWEEP_MS) + SWEEP_MS) % SWEEP_MS) / SWEEP_MS;
-  return -SWEEP_BAND + progress * (width + 2 * SWEEP_BAND);
+/**
+ * How high a column `distance` tiles from where the load began stands, `elapsed` ms in, as a share of
+ * the rows from 0 to 1.
+ */
+export function waveHeight(distance: number, elapsed: number, reduced: boolean): number {
+  const at = reduced ? STILL_MS : elapsed;
+  const phase = at / WAVE_PERIOD_MS - distance / WAVE_LENGTH;
+  const swell = (1 + Math.sin(2 * Math.PI * phase)) / 2;
+  const grow = reduced ? 1 : 1 - (1 - Math.min(1, elapsed / WAVE_GROW_MS)) ** 3;
+  return (WAVE_MIN + (1 - WAVE_MIN) * swell) * grow;
+}
+
+/** How much a column of `height` rows lights the tile `fromBottom` rows up, its top tile in part. */
+export function waveLight(fromBottom: number, height: number): number {
+  return Math.max(0, Math.min(1, height - fromBottom));
 }
 
 /** A soft bump: 1 at the center, 0 at `t = 1`, flat at both ends so the edge never shows a ring. */
@@ -109,9 +133,9 @@ export function rippleLight(distance: number, age: number, reduced: boolean): nu
 }
 
 /** The share of light a tile keeps `dx` and `dy` px beyond the label's box, so the label never loses contrast. */
-export function labelShade(dx: number, dy: number): number {
+export function labelShade(dx: number, dy: number, floor = LABEL_DIM): number {
   const t = Math.min(1, Math.hypot(dx / LABEL_FEATHER_X, dy / LABEL_FEATHER_Y));
-  return LABEL_DIM + (1 - LABEL_DIM) * t * t * (3 - 2 * t);
+  return floor + (1 - floor) * t * t * (3 - 2 * t);
 }
 
 /** A stable random value in [0, 1) for a tile, so the mosaic is the same on every frame. */
@@ -147,11 +171,21 @@ function useTileField(
     originY: 0,
     /** Current light per tile, and each tile's fixed rest light, gain, shade behind the label, and ink. */
     cells: new Float32Array(0),
+    /** The wave's own light per tile, drawn over the mosaic in its own ink. */
+    wave: new Float32Array(0),
     rest: new Float32Array(0),
     gain: new Float32Array(0),
     shade: new Float32Array(0),
     /** 1 where a tile wears the label-safe ink, 0 where it glints. */
     safe: new Uint8Array(0),
+    /** The rows that show inside the bevel, from the top one, which the wave's columns stand in. */
+    bandTop: 0,
+    bandRows: 0,
+    /** When the current load began and where its wave starts from, or 0 at rest. */
+    busySince: 0,
+    waveOrigin: 0,
+    /** Where the last press landed, so a load it starts can begin there. */
+    press: null as { x: number; y: number; t: number } | null,
     pointer: null as { x: number; y: number; t: number } | null,
     weight: 0,
     targetWeight: 0,
@@ -160,6 +194,9 @@ function useTileField(
     last: 0,
     safeInk: "",
     glintInk: "",
+    waveInk: "",
+    /** The resting mosaic's share of its light, which falls while loading. */
+    restScale: 1,
     clipRadius: 0,
     resolution: 0,
   });
@@ -179,26 +216,43 @@ function useTileField(
       return (window.devicePixelRatio || 1) * stepped;
     };
 
-    // Both inks resolve through the canvas's own colors, so relative OKLCH and the theme apply.
+    // The inks resolve through the canvas's own colors, so relative OKLCH and the theme apply.
     const readInks = () => {
       const style = getComputedStyle(canvas);
       state.safeInk = style.color;
       state.glintInk = style.borderTopColor;
+      state.waveInk = style.outlineColor;
     };
 
     const layout = () => {
       const width = canvas.offsetWidth;
       const height = canvas.offsetHeight;
       // Enough tiles to run past every edge, centered, so the bevel's clip cuts the mosaic evenly
-      // on all four sides and it reads as continuing under the rim.
+      // on all four sides and it reads as continuing under the rim. An odd count keeps one column
+      // on the middle, so as the button widens the tiles hold still and new columns join each side.
       const gap = CELL - TILE;
-      const cols = Math.ceil(width / CELL) + 1;
+      const cols = (Math.ceil(width / CELL) + 1) | 1;
       const rows = Math.ceil(height / CELL) + 1;
+      // A relayout mid-load keeps every tile's light, matched by its place from the middle.
+      const keep = (from: Float32Array<ArrayBuffer>) => {
+        const next = new Float32Array(cols * rows);
+        if (state.rows !== rows || state.cols === 0) return next;
+        const shift = (state.cols - cols) / 2;
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const source = col + shift;
+            if (source < 0 || source >= state.cols) continue;
+            next[row * cols + col] = from[row * state.cols + source] ?? 0;
+          }
+        }
+        return next;
+      };
+      state.cells = keep(state.cells);
+      state.wave = keep(state.wave);
       state.cols = cols;
       state.rows = rows;
       state.originX = (width - (cols * CELL - gap)) / 2;
       state.originY = (height - (rows * CELL - gap)) / 2;
-      state.cells = new Float32Array(cols * rows);
       state.rest = new Float32Array(cols * rows);
       state.gain = new Float32Array(cols * rows);
       state.shade = new Float32Array(cols * rows);
@@ -207,6 +261,17 @@ function useTileField(
         getComputedStyle(canvas.parentElement ?? canvas).borderTopLeftRadius,
       );
       state.clipRadius = Math.max(0, Math.min(radius || 0, height / 2) - BEVEL);
+      // The wave stands in the rows whose middles show inside the bevel.
+      let bandTop = -1;
+      let bandRows = 0;
+      for (let row = 0; row < rows; row++) {
+        const cy = state.originY + row * CELL + TILE / 2;
+        if (cy < BEVEL || cy > height - BEVEL) continue;
+        if (bandTop < 0) bandTop = row;
+        bandRows++;
+      }
+      state.bandTop = Math.max(0, bandTop);
+      state.bandRows = bandRows;
 
       // The label's box in the canvas's px. offset* ignores the press scale and the camera zoom.
       const label = labelRef.current;
@@ -224,19 +289,19 @@ function useTileField(
         for (let col = 0; col < cols; col++) {
           const cx = state.originX + col * CELL + CELL / 2;
           const index = row * cols + col;
+          // Each tile's character is keyed to its place from the middle, so a resize keeps it.
+          const key = col - (cols - 1) / 2;
           // Most tiles rest near clear and some catch the light, like a sparse mosaic.
-          const noise = tileNoise(col, row, 1);
+          const noise = tileNoise(key, row, 1);
           state.rest[index] = noise > 0.3 ? ((noise - 0.3) / 0.7) ** 1.5 : 0;
-          state.gain[index] = 0.35 + 0.65 * tileNoise(col, row, 2);
+          state.gain[index] = 0.35 + 0.65 * tileNoise(key, row, 2);
           // Half the tiles move away from the label's color, so they only add contrast and carry the
           // mosaic straight through the label. The other half glint toward it, and give way there.
-          const safe = tileNoise(col, row, 3) < SAFE_SHARE;
+          const safe = tileNoise(key, row, 3) < SAFE_SHARE;
           state.safe[index] = safe ? 1 : 0;
-          if (box && !safe) {
-            const dx = Math.max(box.left - cx, 0, cx - box.right);
-            const dy = Math.max(box.top - cy, 0, cy - box.bottom);
-            state.shade[index] = labelShade(dx, dy);
-          } else state.shade[index] = 1;
+          const dx = box ? Math.max(box.left - cx, 0, cx - box.right) : Infinity;
+          const dy = box ? Math.max(box.top - cy, 0, cy - box.bottom) : Infinity;
+          state.shade[index] = safe ? 1 : labelShade(dx, dy);
         }
       }
 
@@ -253,6 +318,8 @@ function useTileField(
 
     const draw = () => {
       const { cols, rows, cells, rest, shade, safe, originX, originY, resolution } = state;
+      // While loading there's no label to give way to, so the tiles behind it come back to full.
+      const clear = (1 - state.restScale) / (1 - BUSY_REST);
       const width = canvas.offsetWidth;
       const height = canvas.offsetHeight;
       ctx.setTransform(resolution, 0, 0, resolution, 0, 0);
@@ -270,12 +337,25 @@ function useTileField(
           for (let col = 0; col < cols; col++) {
             const index = row * cols + col;
             if (safe[index] !== ink) continue;
-            const light = (rest[index] ?? 0) * REST_ALPHA + (cells[index] ?? 0) * LIT_ALPHA;
-            const alpha = Math.min(1, light) * (shade[index] ?? 1);
+            const light =
+              (rest[index] ?? 0) * REST_ALPHA * state.restScale + (cells[index] ?? 0) * LIT_ALPHA;
+            const shaded = shade[index] ?? 1;
+            const alpha = Math.min(1, light) * (shaded + (1 - shaded) * clear);
             if (alpha < 0.01) continue;
             ctx.globalAlpha = alpha;
             ctx.fillRect(originX + col * CELL, y, TILE, TILE);
           }
+        }
+      }
+      // The wave goes over the mosaic in one ink, so its columns read as one body.
+      ctx.fillStyle = state.waveInk;
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const index = row * cols + col;
+          const alpha = (state.wave[index] ?? 0) * LIT_ALPHA;
+          if (alpha < 0.01) continue;
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(originX + col * CELL, originY + row * CELL, TILE, TILE);
         }
       }
       ctx.restore();
@@ -300,20 +380,37 @@ function useTileField(
       );
 
       const { cols, rows, cells, gain, originX, originY, pointer, weight, ripples } = state;
+      const { bandTop, bandRows } = state;
       const busy = busyRef.current;
-      const sweep = busy && !instant ? sweepCenter(now, canvas.offsetWidth) : 0;
-      // The sweep keeps frames coming for as long as it loads.
+      const middle = canvas.offsetWidth / 2;
+      if (busy && !state.busySince) {
+        // A load sends its wave out from where its press landed, or from the middle. It's kept as an
+        // offset from the middle, which the tiles hold to as the cap resizes.
+        state.busySince = now;
+        const press = state.press && now - state.press.t < 1000 ? state.press : null;
+        state.waveOrigin = press ? press.x - middle : 0;
+      } else if (!busy) state.busySince = 0;
+      const elapsed = busy ? now - state.busySince : 0;
+      const restTarget = busy ? BUSY_REST : 1;
+      const restNext = approach(state.restScale, restTarget, dt, instant ? 1 : BUSY_REST_MS);
+      state.restScale = Math.abs(restNext - restTarget) < SETTLED ? restTarget : restNext;
+      // The wave keeps frames coming for as long as it loads, unless it holds still.
       let moving =
-        busy || ripples.length > 0 || Math.abs(state.weight - state.targetWeight) > SETTLED;
+        (busy && !instant) ||
+        state.restScale !== restTarget ||
+        ripples.length > 0 ||
+        Math.abs(state.weight - state.targetWeight) > SETTLED;
       for (let row = 0; row < rows; row++) {
         const cy = originY + row * CELL + CELL / 2;
         for (let col = 0; col < cols; col++) {
           const cx = originX + col * CELL + CELL / 2;
+          const index = row * cols + col;
           let target = 0;
-          if (busy) {
-            target += instant
-              ? BUSY_GLOW
-              : SWEEP_STRENGTH * falloff(Math.abs(cx - sweep) / SWEEP_BAND);
+          let wave = 0;
+          const fromBottom = bandTop + bandRows - 1 - row;
+          if (busy && fromBottom >= 0 && fromBottom < bandRows) {
+            const distance = Math.abs(cx - middle - state.waveOrigin) / CELL;
+            wave = waveLight(fromBottom, waveHeight(distance, elapsed, instant) * bandRows);
           }
           if (pointer) target += pointerLight(Math.hypot(cx - pointer.x, cy - pointer.y), weight);
           for (const ripple of ripples) {
@@ -323,9 +420,20 @@ function useTileField(
               instant,
             );
           }
-          const index = row * cols + col;
-          // Each tile takes its own share of the light, so the glow reads as a mosaic, not a blob.
-          target = Math.min(1, target) * (gain[index] ?? 1);
+          // Each tile takes its own share of the light, so the glow reads as a mosaic, not a blob. The
+          // wave varies less, so its columns stay whole.
+          const tileGain = gain[index] ?? 1;
+          target = Math.min(1, target) * tileGain;
+          wave *= WAVE_FLOOR + (1 - WAVE_FLOOR) * tileGain;
+          const lit = state.wave[index] ?? 0;
+          const settled = approach(
+            lit,
+            wave,
+            dt,
+            wave > lit || instant ? CELL_ATTACK_MS : WAVE_RELEASE_MS,
+          );
+          state.wave[index] = Math.abs(settled - wave) < SETTLED ? wave : settled;
+          if (state.wave[index] !== wave) moving = true;
           const current = cells[index] ?? 0;
           const tau = target > current || instant ? CELL_ATTACK_MS : CELL_RELEASE_MS;
           const next = approach(current, target, dt, tau);
@@ -398,8 +506,12 @@ function useTileField(
     return { x: (event.clientX - rect.left) / scale, y: (event.clientY - rect.top) / scale };
   };
 
-  // Starting or ending a load wakes the field, so the sweep begins and the tiles settle after it.
-  useEffect(() => kick.current(), [busy]);
+  // Starting or ending a load wakes the field, so the wave begins and the tiles settle after it.
+  // A loading button takes no input, so the pointer's light lets go as the wave arrives.
+  useEffect(() => {
+    if (busy) field.current.pointer = null;
+    kick.current();
+  }, [busy]);
 
   /** A ring of light from the middle, for a change no pointer started, such as a load finishing. */
   const ring = useCallback(() => {
@@ -415,6 +527,7 @@ function useTileField(
 
   const handlers = {
     onPointerMove(event: PointerEvent<HTMLElement>) {
+      if (busyRef.current) return;
       const state = field.current;
       const point = localPoint(event);
       const now = event.timeStamp;
@@ -433,9 +546,11 @@ function useTileField(
       kick.current();
     },
     onPointerDown(event: PointerEvent<HTMLElement>) {
+      if (busyRef.current) return;
       const state = field.current;
       const point = localPoint(event);
       state.ripples.push({ ...point, born: performance.now() });
+      state.press = { ...point, t: performance.now() };
       if (event.pointerType === "touch") state.pointer = { ...point, t: event.timeStamp };
       kick.current();
     },
@@ -446,7 +561,8 @@ function useTileField(
     },
     /** A key press rings out from the middle, since there's no pointer to start from. */
     onKeyDown(event: KeyboardEvent<HTMLElement>) {
-      if (event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
+      if (busyRef.current || event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
+      field.current.press = null;
       const target = event.currentTarget;
       field.current.ripples.push({
         x: target.offsetWidth / 2,
@@ -473,6 +589,9 @@ const MATERIAL = {
   // The mosaic's two inks, a step either side of the body, by steps each tone sets.
   "--gb-shine": "oklch(from var(--gb-base) calc(l + var(--gb-shine-l)) calc(c * 0.75) h)",
   "--gb-deep": "oklch(from var(--gb-base) calc(l - var(--gb-deep-l)) calc(c * 1.05) h)",
+  // The loading wave's inks, a step past each of those, so it stands apart from the resting tiles.
+  "--gb-spark": "oklch(from var(--gb-base) calc(l + var(--gb-shine-l) + 0.12) calc(c * 0.5) h)",
+  "--gb-ember": "oklch(from var(--gb-base) calc(l - var(--gb-deep-l) - 0.14) calc(c * 1.05) h)",
   // Pressed, the top falls into shadow as the cap sinks.
   "--gb-sink": "oklch(from var(--gb-base) calc(l - 0.18) c h / 0.22)",
   // A colored cap casts its own color, so it glows onto the page rather than greying it.
@@ -487,23 +606,24 @@ export type GridTone = "primary" | "secondary" | "destructive";
 /**
  * Each tone's base, label, and hover wash, and per theme its ramp and which tile ink is safe behind
  * the label: the one that moves away from the label's color. The other glints toward it and gives way.
+ * The loading wave takes whichever ink reads as light on that cap.
  */
 const TONES: Record<GridTone, { surface: string; hover: string }> = {
   primary: {
     surface:
-      "text-text-on-accent [--gb-deep-l:0.12] [--gb-shine-l:0.22] [--gb-base:var(--color-accent-solid)] [--gb-shadow:var(--color-accent-solid)] [--gb-top-l:0] [--gb-bottom-l:-0.06] [--gb-safe:var(--gb-deep)] [--gb-glint:var(--gb-shine)] dark:[--gb-top-l:0.05] dark:[--gb-bottom-l:-0.01] dark:[--gb-safe:var(--gb-shine)] dark:[--gb-glint:var(--gb-deep)]",
+      "text-text-on-accent [--gb-deep-l:0.12] [--gb-shine-l:0.22] [--gb-base:var(--color-accent-solid)] [--gb-shadow:var(--color-accent-solid)] [--gb-top-l:0] [--gb-bottom-l:-0.06] [--gb-safe:var(--gb-deep)] [--gb-glint:var(--gb-shine)] [--gb-wave:var(--gb-spark)] dark:[--gb-top-l:0.05] dark:[--gb-bottom-l:-0.01] dark:[--gb-safe:var(--gb-shine)] dark:[--gb-glint:var(--gb-deep)]",
     hover: "bg-[color-mix(in_oklab,var(--color-accent-solid-hover)_40%,transparent)]",
   },
   destructive: {
     surface:
-      "text-danger-on-solid [--gb-deep-l:0.12] [--gb-shine-l:0.22] [--gb-base:var(--color-danger-solid)] [--gb-shadow:var(--color-danger-solid)] [--gb-top-l:0] [--gb-bottom-l:-0.06] [--gb-safe:var(--gb-deep)] [--gb-glint:var(--gb-shine)] dark:[--gb-top-l:0.05] dark:[--gb-bottom-l:-0.01] dark:[--gb-safe:var(--gb-shine)] dark:[--gb-glint:var(--gb-deep)]",
+      "text-danger-on-solid [--gb-deep-l:0.12] [--gb-shine-l:0.22] [--gb-base:var(--color-danger-solid)] [--gb-shadow:var(--color-danger-solid)] [--gb-top-l:0] [--gb-bottom-l:-0.06] [--gb-safe:var(--gb-deep)] [--gb-glint:var(--gb-shine)] [--gb-wave:var(--gb-spark)] dark:[--gb-top-l:0.05] dark:[--gb-bottom-l:-0.01] dark:[--gb-safe:var(--gb-shine)] dark:[--gb-glint:var(--gb-deep)]",
     hover: "bg-[color-mix(in_oklab,var(--color-danger-solid-hover)_40%,transparent)]",
   },
   // A neutral cap: white in light, a raised grey in dark, casting a plain shadow. Its label is dark
   // in light and light in dark, so the safe ink swaps the other way round.
   secondary: {
     surface:
-      "text-text-primary [--gb-deep-l:0.12] [--gb-shine-l:0.22] [--gb-base:var(--color-bg-raised)] [--gb-shadow:oklch(0.35_0_0)] [--gb-top-l:0] [--gb-bottom-l:-0.045] [--gb-safe:var(--gb-shine)] [--gb-glint:var(--gb-deep)] dark:[--gb-shadow:oklch(0.08_0_0)] dark:[--gb-top-l:0.02] dark:[--gb-bottom-l:-0.04] dark:[--gb-safe:var(--gb-deep)] dark:[--gb-glint:var(--gb-shine)]",
+      "text-text-primary [--gb-deep-l:0.12] [--gb-shine-l:0.22] [--gb-base:var(--color-bg-raised)] [--gb-shadow:oklch(0.35_0_0)] [--gb-top-l:0] [--gb-bottom-l:-0.045] [--gb-safe:var(--gb-shine)] [--gb-glint:var(--gb-deep)] [--gb-wave:var(--gb-ember)] dark:[--gb-shadow:oklch(0.08_0_0)] dark:[--gb-top-l:0.02] dark:[--gb-bottom-l:-0.04] dark:[--gb-safe:var(--gb-deep)] dark:[--gb-glint:var(--gb-shine)] dark:[--gb-wave:var(--gb-spark)]",
     // The system's hover fill, flat across the whole cap, greys out its gradient. A share of it
     // shades the cap instead.
     hover: "bg-[color-mix(in_oklab,var(--color-bg-hover)_40%,transparent)]",
@@ -548,7 +668,9 @@ function GridSurface({
   const hover = mergeFluidHoverHandlers(self.hover.handlers, {});
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contentRef = useRef<HTMLSpanElement>(null);
-  const tiles = useTileField(canvasRef, contentRef, status === "loading");
+  // Loading takes no input but keeps its color and focus, so the wave stays the loudest thing.
+  const busy = status === "loading";
+  const tiles = useTileField(canvasRef, contentRef, busy);
   const press = pressMotion();
 
   // Finishing rings out from the middle, so the result reads as coming from the button itself.
@@ -561,14 +683,17 @@ function GridSurface({
     <motion.button
       ref={self.ref}
       type="button"
-      whileTap="pressed"
-      aria-busy={status === "loading" || undefined}
+      whileTap={busy ? undefined : "pressed"}
+      aria-busy={busy || undefined}
+      aria-disabled={busy || undefined}
       {...button}
+      onClick={busy ? undefined : button.onClick}
       {...hover}
       {...tiles.handlers}
       className={cn(
         "group relative isolate inline-flex cursor-pointer items-center aria-busy:cursor-progress justify-center overflow-hidden whitespace-nowrap outline-none select-none [-webkit-tap-highlight-color:transparent]",
-        "[box-shadow:var(--gb-lift)] transition-[box-shadow] duration-[var(--spring-fast)] active:[box-shadow:var(--gb-lift-pressed)]",
+        "[box-shadow:var(--gb-lift)] transition-[box-shadow] duration-[var(--spring-fast)]",
+        !busy && "active:[box-shadow:var(--gb-lift-pressed)]",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-border-focus",
         "disabled:pointer-events-none disabled:opacity-50",
         TONES[tone].surface,
@@ -581,15 +706,26 @@ function GridSurface({
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,var(--gb-top),var(--gb-bottom))]"
       />
-      <SelfFluidHoverLayer self={self} className={TONES[tone].hover} />
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,var(--gb-sink),transparent_70%)] opacity-0 transition-opacity duration-[var(--spring-fast)] group-active:opacity-100"
+        className={cn(
+          "pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-[var(--spring-fast)]",
+          busy && "opacity-0",
+        )}
+      >
+        <SelfFluidHoverLayer self={self} className={TONES[tone].hover} />
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,var(--gb-sink),transparent_70%)] opacity-0 transition-opacity duration-[var(--spring-fast)]",
+          !busy && "group-active:opacity-100",
+        )}
       />
       <canvas
         ref={canvasRef}
         aria-hidden
-        className="pointer-events-none absolute inset-0 block size-full border-[color:var(--gb-glint)] text-[color:var(--gb-safe)]"
+        className="pointer-events-none absolute inset-0 block size-full border-[color:var(--gb-glint)] text-[color:var(--gb-safe)] [outline-color:var(--gb-wave)]"
       />
       <span
         aria-hidden
@@ -597,7 +733,10 @@ function GridSurface({
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-px transition-opacity duration-[var(--spring-fast)] group-active:opacity-45"
+        className={cn(
+          "pointer-events-none absolute inset-px transition-opacity duration-[var(--spring-fast)]",
+          !busy && "group-active:opacity-45",
+        )}
         style={{ ...GLEAM, borderRadius: nestedRadius(shape.bgRadius, 0, 1) }}
       />
       <motion.span
@@ -632,94 +771,11 @@ function useFaceSwap() {
   });
 }
 
-// The loader's timing is part of this experiment: a quick lap, and a comet that breathes as it goes.
-/** The system's infinity loop, as a closed path measured in hundredths. */
-const LOOP_PATH =
-  "M 12 12 C 14 8.5 19 8.5 19 12 C 19 15.5 14 15.5 12 12 C 10 8.5 5 8.5 5 12 C 5 15.5 10 15.5 12 12 Z";
-/** The loop's bounds plus half a stroke, so it fills its slot rather than floating in a square. */
-const LOOP_VIEWBOX = "3.75 7.25 16.5 9.5";
-const LOOP_ASPECT = 16.5 / 9.5;
-/** One lap of the comet, and one breath of its length, from short to long and back. */
-const LOOP_LAP_MS = 900;
-const LOOP_BREATH_MS = 1800;
-const COMET_SHORT = 14;
-const COMET_LONG = 34;
-/** The comet's layers, head first: each is longer and fainter, with every head on the same point. */
-const COMET_TAIL = [
-  { extra: 0, opacity: 1 },
-  { extra: 7, opacity: 0.45 },
-  { extra: 16, opacity: 0.2 },
-] as const;
-const TRACK_OPACITY = 0.16;
-
-/** A dash `length` long, with the rest of the loop as its gap, so the pattern wraps cleanly. */
-const dash = (length: number) => `${length} ${100 - length}`;
-
 /**
- * The infinity loader: a faint track of the whole loop, and a tapered comet that laps it quickly
- * while its length breathes. It mounts ahead of time, hidden, and only runs while `spinning`, so idle
- * buttons cost nothing. Under reduced motion the comet holds still partway round the loop, which
- * still reads as loading beside the announcement.
- */
-function InfinityLoader({ size, spinning }: { size: number; spinning: boolean }) {
-  const still = useReducedMotionConfig() === true || !spinning;
-  const width = Math.round(size * 1.25);
-  const height = Math.round(width / LOOP_ASPECT);
-  // The icons draw a 2-unit stroke on a 24-unit grid. Match that rendered weight in this box's units.
-  const stroke = ((2 * size) / 24) * (16.5 / width);
-  return (
-    <svg width={width} height={height} viewBox={LOOP_VIEWBOX} fill="none" aria-hidden>
-      <path d={LOOP_PATH} stroke="currentColor" strokeWidth={stroke} opacity={TRACK_OPACITY} />
-      {COMET_TAIL.map(({ extra, opacity }) => (
-        <motion.path
-          key={extra}
-          d={LOOP_PATH}
-          stroke="currentColor"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          pathLength={100}
-          opacity={opacity}
-          // A longer dash starts `extra` further back, so its head lands on the head of the comet.
-          // At rest it waits where a lap begins, so starting to spin never jumps.
-          initial={{ strokeDashoffset: extra, strokeDasharray: dash(COMET_SHORT + extra) }}
-          animate={
-            still
-              ? { strokeDashoffset: extra, strokeDasharray: dash(COMET_SHORT + extra) }
-              : {
-                  strokeDashoffset: [extra, extra - 100],
-                  strokeDasharray: [
-                    dash(COMET_SHORT + extra),
-                    dash(COMET_LONG + extra),
-                    dash(COMET_SHORT + extra),
-                  ],
-                }
-          }
-          transition={
-            still
-              ? { duration: 0 }
-              : {
-                  strokeDashoffset: {
-                    duration: LOOP_LAP_MS / 1000,
-                    ease: "linear",
-                    repeat: Infinity,
-                  },
-                  strokeDasharray: {
-                    duration: LOOP_BREATH_MS / 1000,
-                    ease: "easeInOut",
-                    repeat: Infinity,
-                  },
-                }
-          }
-        />
-      ))}
-    </svg>
-  );
-}
-
-/**
- * A grid button with a label and optional icons. While `status` is loading, a spinner takes the
- * label's place and a band of light sweeps the mosaic; when it's done, a check and `doneLabel` take
- * over and a ring of light leaves the middle. Every face shares one cell, so the width never moves.
+ * A grid button with a label and optional icons. While `status` is loading it takes no input, its
+ * label steps aside, and the mosaic alone shows the work: its columns of tiles rise and fall in a
+ * wave that travels out from where it was pressed. When it's done, a check and `doneLabel` take over and a ring of light
+ * leaves the middle. Every face shares one cell, so the width holds unless the result is wider.
  */
 export function GridButton({
   children,
@@ -728,6 +784,7 @@ export function GridButton({
   trailingIcon,
   disabled,
   status = "idle",
+  loadingLabel,
   doneLabel,
   onClick,
 }: {
@@ -737,6 +794,8 @@ export function GridButton({
   trailingIcon?: IconName;
   disabled?: boolean;
   status?: GridStatus;
+  /** What screen readers hear while loading, such as "Publishing…" for "Publish". */
+  loadingLabel?: string;
   doneLabel?: string;
   onClick?: () => void;
 }) {
@@ -774,13 +833,6 @@ export function GridButton({
               <span className="[text-box:trim-both_cap_alphabetic]">{children}</span>
               {Trailing && <Trailing size={size.icon} strokeWidth={2} />}
             </motion.span>
-            <motion.span
-              aria-hidden
-              className="grid place-items-center [grid-area:face]"
-              {...face(status === "loading")}
-            >
-              <InfinityLoader size={size.icon} spinning={status === "loading"} />
-            </motion.span>
             {doneLabel && (
               <motion.span
                 aria-hidden
@@ -795,7 +847,7 @@ export function GridButton({
         }
       />
       <span role="status" className="sr-only">
-        {status === "loading" ? "Loading" : status === "done" ? doneLabel : ""}
+        {status === "loading" ? (loadingLabel ?? "Loading") : status === "done" ? doneLabel : ""}
       </span>
     </>
   );
@@ -868,7 +920,7 @@ export function GridIconButton({
 }
 
 /** How long a simulated load runs. */
-const LOAD_MS = 1400;
+const LOAD_MS = 3200;
 
 export type GridButtonSample =
   | {
@@ -883,6 +935,7 @@ export type GridButtonSample =
       disabled?: boolean;
       /** A press runs a simulated load, then returns to rest, or first shows `doneLabel`. */
       flow?: "load" | "load-feedback";
+      loadingLabel?: string;
       doneLabel?: string;
     }
   | {
@@ -919,6 +972,7 @@ function TextSample({ sample }: { sample: Extract<GridButtonSample, { kind: "tex
       trailingIcon={sample.trailingIcon}
       disabled={sample.disabled}
       status={sample.flow ? status : sample.status}
+      loadingLabel={sample.loadingLabel}
       doneLabel={sample.doneLabel}
       onClick={sample.flow ? run : undefined}
     >
